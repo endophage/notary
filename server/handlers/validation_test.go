@@ -189,9 +189,7 @@ func TestValidateRootRotation(t *testing.T) {
 	err = signed.Sign(crypto, r, rootKey, oldRootKey)
 	assert.NoError(t, err)
 
-	rt, err := data.RootFromSigned(r)
-	assert.NoError(t, err)
-	repo.SetRoot(rt)
+	repo.CheckAndSetRoot(r)
 
 	sn, err = repo.SignSnapshot(data.DefaultExpires(data.CanonicalSnapshotRole))
 	assert.NoError(t, err)
@@ -902,7 +900,9 @@ func TestValidateTargetsLoadParent(t *testing.T) {
 
 	kdb := keys.NewDB()
 	valRepo := tuf.NewRepo(kdb, nil)
-	valRepo.SetRoot(baseRepo.Root)
+	root, err := baseRepo.Root.ToSigned()
+	assert.NoError(t, err)
+	valRepo.CheckAndSetRoot(root)
 
 	updates, err := loadAndValidateTargets("gun", valRepo, roles, kdb, store)
 	assert.NoError(t, err)
@@ -955,7 +955,9 @@ func TestValidateTargetsParentInUpdate(t *testing.T) {
 
 	kdb := keys.NewDB()
 	valRepo := tuf.NewRepo(kdb, nil)
-	valRepo.SetRoot(baseRepo.Root)
+	root, err := baseRepo.Root.ToSigned()
+	assert.NoError(t, err)
+	valRepo.CheckAndSetRoot(root)
 
 	// because we sort the roles, the list of returned updates
 	// will contain shallower roles first, in this case "targets",
@@ -1000,7 +1002,9 @@ func TestValidateTargetsParentNotFound(t *testing.T) {
 
 	kdb := keys.NewDB()
 	valRepo := tuf.NewRepo(kdb, nil)
-	valRepo.SetRoot(baseRepo.Root)
+	root, err := baseRepo.Root.ToSigned()
+	assert.NoError(t, err)
+	valRepo.CheckAndSetRoot(root)
 
 	_, err = loadAndValidateTargets("gun", valRepo, roles, kdb, store)
 	assert.Error(t, err)
@@ -1052,7 +1056,9 @@ func TestValidateTargetsRoleNotInParent(t *testing.T) {
 
 	kdb = keys.NewDB()
 	valRepo := tuf.NewRepo(kdb, nil)
-	valRepo.SetRoot(baseRepo.Root)
+	root, err := baseRepo.Root.ToSigned()
+	assert.NoError(t, err)
+	valRepo.CheckAndSetRoot(root)
 
 	// because we sort the roles, the list of returned updates
 	// will contain shallower roles first, in this case "targets",

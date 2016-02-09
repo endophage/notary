@@ -417,9 +417,9 @@ func TestSwizzlerChangeRootKey(t *testing.T) {
 				}
 			}
 
-			require.NoError(t, tufRepo.SetRoot(newRoot))
 			signedThing, err := newRoot.ToSigned()
 			require.NoError(t, err)
+			require.NoError(t, tufRepo.CheckAndSetRoot(signedThing))
 			require.NoError(t, signed.Verify(signedThing, data.CanonicalRootRole, 1, kdb))
 		default:
 			require.True(t, bytes.Equal(origMeta, newMeta), "bytes have changed for role %s", role)

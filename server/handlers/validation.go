@@ -58,8 +58,12 @@ func validateUpdate(cs signed.CryptoService, gun string, updates []storage.MetaU
 			return nil, validation.ErrBadRoot{Msg: err.Error()}
 		}
 
+		newSigned, err := root.ToSigned()
+		if err != nil {
+			return nil, validation.ErrBadRoot{Msg: err.Error()}
+		}
 		// setting root will update keys db
-		if err = repo.SetRoot(root); err != nil {
+		if err = repo.CheckAndSetRoot(newSigned); err != nil {
 			logrus.Error("ErrValidation: ", err.Error())
 			return nil, validation.ErrValidation{Msg: err.Error()}
 		}
@@ -69,11 +73,11 @@ func validateUpdate(cs signed.CryptoService, gun string, updates []storage.MetaU
 		if oldRootJSON == nil {
 			return nil, validation.ErrValidation{Msg: "no pre-existing root and no root provided in update."}
 		}
-		parsedOldRoot := &data.SignedRoot{}
-		if err := json.Unmarshal(oldRootJSON, parsedOldRoot); err != nil {
+		signedOldRoot := &data.Signed{}
+		if err := json.Unmarshal(oldRootJSON, signedOldRoot); err != nil {
 			return nil, validation.ErrValidation{Msg: "pre-existing root is corrupted and no root provided in update."}
 		}
-		if err = repo.SetRoot(parsedOldRoot); err != nil {
+		if err = repo.CheckAndSetRoot(signedOldRoot); err != nil {
 			logrus.Error("ErrValidation: ", err.Error())
 			return nil, validation.ErrValidation{Msg: err.Error()}
 		}
@@ -157,7 +161,7 @@ func loadAndValidateTargets(gun string, repo *tuf.Repo, roles map[string]storage
 			}
 		}
 		var (
-			t   *data.SignedTargets
+			t   *data.Signed
 			err error
 		)
 		if t, err = validateTargets(role, roles, kdb); err != nil {
@@ -171,7 +175,7 @@ func loadAndValidateTargets(gun string, repo *tuf.Repo, roles map[string]storage
 			return nil, validation.ErrBadTargets{Msg: err.Error()}
 		}
 		// this will load keys and roles into the kdb
-		err = repo.SetTargets(role, t)
+		err = repo.CheckAndSetTargets(role, t)
 		if err != nil {
 			return nil, err
 		}
@@ -185,12 +189,12 @@ func loadTargetsFromStore(gun, role string, repo *tuf.Repo, store storage.MetaSt
 	if err != nil {
 		return err
 	}
-	t := &data.SignedTargets{}
+	t := &data.Signed{}
 	err = json.Unmarshal(tgtJSON, t)
 	if err != nil {
 		return err
 	}
-	return repo.SetTargets(role, t)
+	return repo.CheckAndSetTargets(role, t)
 }
 
 func generateSnapshot(gun string, kdb *keys.KeyDB, repo *tuf.Repo, store storage.MetaStore) (*storage.MetaUpdate, error) {
@@ -224,14 +228,14 @@ func generateSnapshot(gun string, kdb *keys.KeyDB, repo *tuf.Repo, store storage
 			return nil, validation.ErrValidation{Msg: err.Error()}
 		}
 	}
-	var sn *data.SignedSnapshot
+	var sn *data.Signed
 	if currentJSON != nil {
-		sn = new(data.SignedSnapshot)
+		sn = new(data.Signed)
 		err := json.Unmarshal(currentJSON, sn)
 		if err != nil {
 			return nil, validation.ErrValidation{Msg: err.Error()}
 		}
-		err = repo.SetSnapshot(sn)
+		err = repo.CheckAndSetSnapshot(sn)
 		if err != nil {
 			return nil, validation.ErrValidation{Msg: err.Error()}
 		}
@@ -315,7 +319,7 @@ func checkHashes(meta data.FileMeta, update []byte) bool {
 	return true
 }
 
-func validateTargets(role string, roles map[string]storage.MetaUpdate, kdb *keys.KeyDB) (*data.SignedTargets, error) {
+func validateTargets(role string, roles map[string]storage.MetaUpdate, kdb *keys.KeyDB) (*data.Signed, error) {
 	// TODO: when delegations are being validated, validate parent
 	//       role exists for any delegation
 	s := &data.Signed{}
@@ -335,7 +339,7 @@ func validateTargets(role string, roles map[string]storage.MetaUpdate, kdb *keys
 	if !data.ValidTUFType(t.Signed.Type, data.CanonicalTargetsRole) {
 		return nil, fmt.Errorf("%s has wrong type", role)
 	}
-	return t, nil
+	return s, nil
 }
 
 func validateRoot(gun string, oldRoot, newRoot []byte, store storage.MetaStore) (

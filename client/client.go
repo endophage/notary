@@ -618,12 +618,12 @@ func (r *NotaryRepository) bootstrapRepo() error {
 	if err != nil {
 		return err
 	}
-	root := &data.SignedRoot{}
+	root := &data.Signed{}
 	err = json.Unmarshal(rootJSON, root)
 	if err != nil {
 		return err
 	}
-	err = tufRepo.SetRoot(root)
+	err = tufRepo.CheckAndSetRoot(root)
 	if err != nil {
 		return err
 	}
@@ -631,21 +631,21 @@ func (r *NotaryRepository) bootstrapRepo() error {
 	if err != nil {
 		return err
 	}
-	targets := &data.SignedTargets{}
+	targets := &data.Signed{}
 	err = json.Unmarshal(targetsJSON, targets)
 	if err != nil {
 		return err
 	}
-	tufRepo.SetTargets("targets", targets)
+	tufRepo.CheckAndSetTargets("targets", targets)
 
 	snapshotJSON, err := r.fileStore.GetMeta("snapshot", -1)
 	if err == nil {
-		snapshot := &data.SignedSnapshot{}
+		snapshot := &data.Signed{}
 		err = json.Unmarshal(snapshotJSON, snapshot)
 		if err != nil {
 			return err
 		}
-		tufRepo.SetSnapshot(snapshot)
+		tufRepo.CheckAndSetSnapshot(snapshot)
 	} else if _, ok := err.(store.ErrMetaNotFound); !ok {
 		return err
 	}
@@ -790,7 +790,12 @@ func (r *NotaryRepository) bootstrapClient(checkInitialized bool) (*tufclient.Cl
 		return nil, ErrRepoNotInitialized{}
 	}
 
-	err = r.tufRepo.SetRoot(signedRoot)
+	sr, err := signedRoot.ToSigned()
+	if err != nil {
+		return nil, err
+	}
+
+	err = r.tufRepo.CheckAndSetRoot(sr)
 	if err != nil {
 		return nil, err
 	}
