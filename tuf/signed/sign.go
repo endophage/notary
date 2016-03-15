@@ -26,6 +26,7 @@ func Sign(service CryptoService, s *data.Signed, keys ...data.PublicKey) error {
 	logrus.Debugf("sign called with %d keys", len(keys))
 	signatures := make([]data.Signature, 0, len(s.Signatures)+1)
 	signingKeyIDs := make(map[string]struct{})
+	tufIDs := make(map[string]data.PublicKey)
 	ids := make([]string, 0, len(keys))
 
 	privKeys := make(map[string]data.PrivateKey)
@@ -34,6 +35,7 @@ func Sign(service CryptoService, s *data.Signed, keys ...data.PublicKey) error {
 	for _, key := range keys {
 		canonicalID, err := utils.CanonicalKeyID(key)
 		ids = append(ids, canonicalID)
+		tufIDs[key.ID()] = key
 		if err != nil {
 			continue
 		}
@@ -78,6 +80,20 @@ func Sign(service CryptoService, s *data.Signed, keys ...data.PublicKey) error {
 			// key is in the set of key IDs for which a signature has been created
 			continue
 		}
+		var (
+			k  data.PublicKey
+			ok bool
+		)
+		if k, ok = tufIDs[sig.KeyID]; !ok {
+			// key is no longer a valid signing key
+			continue
+		}
+		if err := VerifySignature(s.Signed, sig, k); err != nil {
+			// signature is no longer valid
+			continue
+		}
+		// keep any signatures that still represent valid keys and are
+		// themselves valid
 		signatures = append(signatures, sig)
 	}
 	s.Signatures = signatures
