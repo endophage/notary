@@ -365,6 +365,58 @@ func delegationUpdateVisitor(roleName string, addKeys data.KeyList, removeKeys, 
 	}
 }
 
+// delegationKeyPurger walks all delegated roles and removes a key wherever it is
+// present
+func delegationKeyPurger(keyIDs []string) walkVisitorFunc {
+	ids := make(map[string]struct{})
+	for _, id := range keyIDs {
+		ids[id] = struct{}{}
+	}
+	return func(tgt *data.SignedTargets, validRole data.DelegationRole) interface{} {
+		var canSign bool
+		for i, role := range tgt.Signed.Delegations.Roles {
+			cleanIDs := make([]string, 0, len(role.KeyIDs))
+			for _, id := range role.KeyIDs {
+				if _, ok := ids[id]; !ok {
+					cleanIDs = append(cleanIDs, id)
+				}
+			}
+			if len(cleanIDs) != len(role.KeyIDs) {
+				// if we're going to update this role, ensure we can sign it
+				if !canSign {
+					if err := tr.VerifyCanSign(validRole.Name); err != nil {
+						return err
+					}
+					canSign = true
+				}
+				tgt.Dirty = true
+				tgt.Signed.Delegations.Roles[i].KeyIDs = cleanIDs
+			}
+		}
+		for id, _ := range ids {
+			if _, ok := tgt.Signed.Delegations.Keys[id]; !ok {
+				continue
+			}
+			if !canSign {
+				if err := tr.VerifyCanSign(validRole.Name); err != nil {
+					return err
+				}
+				canSign = true
+			}
+			// delete is a noop if the map key doesn't exist
+			delete(tgt.Signed.Delegations.Keys, id)
+		}
+		return nil
+	}
+}
+
+// PurgeDelegationKeys removes the given keyIDs from all delegation roles in which
+// they are present
+func (tr *Repo) PurgeDelegationKeys(keyIDs []string) error {
+	// Walk all roles to purge all keys in keyIDs
+	return tr.WalkTargets("", "", delegationPurger(keyIDs))
+}
+
 // UpdateDelegationKeys updates the appropriate delegations, either adding
 // a new delegation or updating an existing one. If keys are
 // provided, the IDs will be added to the role (if they do not exist
@@ -392,11 +444,7 @@ func (tr *Repo) UpdateDelegationKeys(roleName string, addKeys data.KeyList, remo
 	// Walk to the parent of this delegation, since that is where its role metadata exists
 	// We do not have to verify that the walker reached its desired role in this scenario
 	// since we've already done another walk to the parent role in VerifyCanSign, and potentially made a targets file
-	err := tr.WalkTargets("", parent, delegationUpdateVisitor(roleName, addKeys, removeKeys, []string{}, []string{}, false, newThreshold))
-	if err != nil {
-		return err
-	}
-	return nil
+	return tr.WalkTargets("", parent, delegationUpdateVisitor(roleName, addKeys, removeKeys, []string{}, []string{}, false, newThreshold))
 }
 
 // UpdateDelegationPaths updates the appropriate delegation's paths.
@@ -421,11 +469,7 @@ func (tr *Repo) UpdateDelegationPaths(roleName string, addPaths, removePaths []s
 	// Walk to the parent of this delegation, since that is where its role metadata exists
 	// We do not have to verify that the walker reached its desired role in this scenario
 	// since we've already done another walk to the parent role in VerifyCanSign
-	err := tr.WalkTargets("", parent, delegationUpdateVisitor(roleName, data.KeyList{}, []string{}, addPaths, removePaths, clearPaths, notary.MinThreshold))
-	if err != nil {
-		return err
-	}
-	return nil
+	return tr.WalkTargets("", parent, delegationUpdateVisitor(roleName, data.KeyList{}, []string{}, addPaths, removePaths, clearPaths, notary.MinThreshold))
 }
 
 // DeleteDelegation removes a delegated targets role from its parent

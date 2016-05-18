@@ -89,6 +89,7 @@ type TufDelegation struct {
 	AddPaths      []string     `json:"add_paths,omitempty"`
 	RemovePaths   []string     `json:"remove_paths,omitempty"`
 	ClearAllPaths bool         `json:"clear_paths,omitempty"`
+	PurgeKeys     bool         `json:"purge_keys,omitempty"`
 }
 
 // ToNewRole creates a fresh role object from the TufDelegation data

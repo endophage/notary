@@ -123,6 +123,8 @@ func changeTargetsDelegation(repo *tuf.Repo, c changelist.Change) error {
 		return repo.UpdateDelegationPaths(c.Scope(), td.AddPaths, td.RemovePaths, td.ClearAllPaths)
 	case changelist.ActionDelete:
 		return repo.DeleteDelegation(c.Scope())
+	case changelist.ActionPurge:
+		return repo.PurgeDelegationKeys(td.RemoveKeys)
 	default:
 		return fmt.Errorf("unsupported action against delegations: %s", c.Action())
 	}

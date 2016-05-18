@@ -31,6 +31,8 @@ const (
 	ActionUpdate = "update"
 	// ActionDelete represents a Delete action
 	ActionDelete = "delete"
+	// ActionPurge represents an aggressive delete in specific contexts
+	ActionPurge = "purge"
 )
 
 // Change is the interface for a TUF Change

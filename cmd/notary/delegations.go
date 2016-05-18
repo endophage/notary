@@ -32,6 +32,12 @@ var cmdDelegationRemoveTemplate = usageTemplate{
 	Long:  "Remove KeyID(s) from the specified Role delegation in a specific Global Unique Name.",
 }
 
+var cmdDelegationPurgeTemplate = usageTemplate{
+	Use:   "purge [ GUN ] < KeyID 1 > ...",
+	Short: "Remove KeyID(s) from the all delegated roles.",
+	Long:  "Remove KeyID(s) from the all delegated roles in a specific Global Unique Name. The KeyID(s) will not be removed from the root, targets, snapshot, or timestamp role if present.",
+}
+
 var cmdDelegationAddTemplate = usageTemplate{
 	Use:   "add [ GUN ] [ Role ] <X509 file path 1> ...",
 	Short: "Add a keys to delegation using the provided public key X509 certificates.",
@@ -61,6 +67,10 @@ func (d *delegationCommander) GetCommand() *cobra.Command {
 	cmdAddDelg.Flags().StringSliceVar(&d.paths, "paths", nil, "List of paths to add")
 	cmdAddDelg.Flags().BoolVar(&d.allPaths, "all-paths", false, "Add all paths to this delegation")
 	cmd.AddCommand(cmdAddDelg)
+
+	cmdPurgeDelgKey := cmdDelegationPurgeTemplate.ToCommand(d.delegationPurgeKey)
+	cmd.AddCommand(cmdPurgeDelgKey)
+
 	return cmd
 }
 
@@ -295,5 +305,37 @@ func (d *delegationCommander) delegationAdd(cmd *cobra.Command, args []string) e
 		"Addition of delegation role %s %sto repository \"%s\" staged for next publish.\n",
 		role, addingItems, gun)
 	cmd.Println("")
+	return nil
+}
+
+func delegationPurgeKey(cmd *cobra.Command, args []string) error {
+	gun := args[0]
+	if len(args) < 2 {
+		return fmt.Errorf(
+			"No KeyID(s) provided to purge from the %s delegations.",
+			gun,
+		)
+	}
+	config, err := d.configGetter()
+	if err != nil {
+		return err
+	}
+	trustPin, err := getTrustPinning(config)
+	if err != nil {
+		return err
+	}
+
+	keyIDs := args[1:]
+
+	// no online operations are performed by add so the transport argument
+	// should be nil
+	nRepo, err := notaryclient.NewNotaryRepository(
+		config.GetString("trust_dir"), gun, getRemoteTrustServer(config), nil, d.retriever, trustPin)
+	if err != nil {
+		return err
+	}
+
+	nRepo.PurgeDelegationKeys(keyIDs)
+
 	return nil
 }
