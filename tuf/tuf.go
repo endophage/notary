@@ -763,6 +763,33 @@ func (tr *Repo) RemoveTargets(role string, targets ...string) error {
 	return nil
 }
 
+func (tr *Repo) PurgeTargets(role string, targets ...string) error {
+	if err := tr.VerifyCanSign(role); err != nil {
+		return err
+	}
+
+	removeTargetVisitor := func(targetPath string) func(*data.SignedTargets, data.DelegationRole) interface{} {
+		return func(tgt *data.SignedTargets, validRole data.DelegationRole) interface{} {
+			// We've already validated the role path in our walk, so just modify the metadata
+			// We don't check against the target path against the valid role paths because it's
+			// possible we got into an invalid state and are trying to fix it
+			delete(tgt.Signed.Targets, targetPath)
+			tgt.Dirty = true
+			return StopWalk{}
+		}
+	}
+
+	// if the role exists but metadata does not yet, then our work is done
+	_, ok := tr.Targets[role]
+	if ok {
+		for _, path := range targets {
+			tr.WalkTargets("", role, removeTargetVisitor(path))
+		}
+	}
+
+	return nil
+}
+
 // UpdateSnapshot updates the FileMeta for the given role based on the Signed object
 func (tr *Repo) UpdateSnapshot(role string, s *data.Signed) error {
 	jsonData, err := json.Marshal(s)
