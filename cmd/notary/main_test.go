@@ -152,6 +152,7 @@ var exampleValidCommands = []string{
 	"init repo",
 	"list repo",
 	"status repo",
+	"reset repo --all",
 	"publish repo",
 	"add repo v1 somefile",
 	"addhash repo targetv1 --sha256 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 10",
@@ -536,13 +537,13 @@ func TestPassphraseRetrieverCaching(t *testing.T) {
 	require.False(t, giveup)
 	require.Equal(t, passphrase, "root_passphrase")
 
-	passphrase, giveup, err = retriever("key", "user", false, 0)
+	_, _, err = retriever("key", "user", false, 0)
 	require.Error(t, err)
-	passphrase, giveup, err = retriever("key", data.CanonicalTargetsRole, false, 0)
+	_, _, err = retriever("key", data.CanonicalTargetsRole, false, 0)
 	require.Error(t, err)
-	passphrase, giveup, err = retriever("key", data.CanonicalSnapshotRole, false, 0)
+	_, _, err = retriever("key", data.CanonicalSnapshotRole, false, 0)
 	require.Error(t, err)
-	passphrase, giveup, err = retriever("key", "targets/delegation", false, 0)
+	_, _, err = retriever("key", "targets/delegation", false, 0)
 	require.Error(t, err)
 
 	// Set up the rest of them
