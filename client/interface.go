@@ -24,7 +24,7 @@ type Repository interface {
 	// Role operations
 	ListRoles() ([]RoleWithSignatures, error)
 	GetDelegationRoles() ([]data.Role, error)
-	AddDelegation(name string, delegationKeys []data.PublicKey, paths []string)
+	AddDelegation(name string, delegationKeys []data.PublicKey, paths []string) error
 	AddDelegationRoleAndKeys(name string, delegationKeys []data.PublicKey) error
 	AddDelegationPaths(name string, paths []string) error
 	RemoveDelegationKeysAndPaths(name string, keyIDs, paths []string) error
