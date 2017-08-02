@@ -1089,7 +1089,7 @@ func TestGetBaseRoles(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, role, baseRole.Name)
-		keyIDs := repo.cryptoService.ListKeys(role)
+		keyIDs := repo.CryptoService().ListKeys(role)
 		for _, keyID := range keyIDs {
 			_, ok := baseRole.Keys[keyID]
 			require.True(t, ok)

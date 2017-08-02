@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,6 +17,7 @@ import (
 	"github.com/docker/notary/trustpinning"
 	"github.com/docker/notary/tuf/data"
 	"github.com/stretchr/testify/require"
+	"strings"
 )
 
 // Once a fixture is read in, ensure that it's valid by making sure the expiry
@@ -35,12 +35,16 @@ func requireValidFixture(t *testing.T, notaryRepo *NotaryRepository) {
 // recursively copies the contents of one directory into another - ignores
 // symlinks
 func recursiveCopy(sourceDir, targetDir string) error {
+	sourceDir, err := filepath.Abs(sourceDir)
+	if err != nil {
+		return err
+	}
 	return filepath.Walk(sourceDir, func(fp string, fi os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		targetFP := filepath.Join(targetDir, strings.TrimPrefix(fp, sourceDir+"/"))
+		targetFP := filepath.Join(targetDir, strings.TrimPrefix(fp, sourceDir))
 
 		if fi.IsDir() {
 			return os.MkdirAll(targetFP, fi.Mode())
@@ -68,7 +72,7 @@ func recursiveCopy(sourceDir, targetDir string) error {
 		if err != nil {
 			return err
 		}
-		return nil
+		return out.Sync()
 	})
 }
 
@@ -76,7 +80,7 @@ func Test0Dot1Migration(t *testing.T) {
 	// make a temporary directory and copy the fixture into it, since updating
 	// and publishing will modify the files
 	tmpDir, err := ioutil.TempDir("", "notary-backwards-compat-test")
-	defer os.RemoveAll(tmpDir)
+	// defer os.RemoveAll(tmpDir)
 	require.NoError(t, err)
 	require.NoError(t, recursiveCopy("../fixtures/compatibility/notary0.1", tmpDir))
 
@@ -91,7 +95,8 @@ func Test0Dot1Migration(t *testing.T) {
 	require.NoError(t, err, "error creating repo: %s", err)
 
 	// check that root_keys and tuf_keys are gone and that all corect keys are present and have the correct headers
-	files, _ := ioutil.ReadDir(filepath.Join(tmpDir, notary.PrivDir))
+	files, err := ioutil.ReadDir(filepath.Join(tmpDir, notary.PrivDir))
+	require.NoError(t, err)
 	require.Equal(t, files[0].Name(), "7fc757801b9bab4ec9e35bfe7a6b61668ff6f4c81b5632af19e6c728ab799599.key")
 	targKey, err := os.OpenFile(filepath.Join(tmpDir, notary.PrivDir, "7fc757801b9bab4ec9e35bfe7a6b61668ff6f4c81b5632af19e6c728ab799599.key"), os.O_RDONLY, notary.PrivExecPerms)
 	require.NoError(t, err)
@@ -220,10 +225,10 @@ func Test0Dot1RepoFormat(t *testing.T) {
 	require.Len(t, targets, 2)
 
 	// Also check that we can add/remove keys by rotating keys
-	oldTargetsKeys := repo.CryptoService.ListKeys(data.CanonicalTargetsRole)
+	oldTargetsKeys := repo.CryptoService().ListKeys(data.CanonicalTargetsRole)
 	require.NoError(t, repo.RotateKey(data.CanonicalTargetsRole, false, nil))
 	require.NoError(t, repo.Publish())
-	newTargetsKeys := repo.CryptoService.ListKeys(data.CanonicalTargetsRole)
+	newTargetsKeys := repo.CryptoService().ListKeys(data.CanonicalTargetsRole)
 
 	require.Len(t, oldTargetsKeys, 1)
 	require.Len(t, newTargetsKeys, 1)
@@ -287,10 +292,10 @@ func Test0Dot3RepoFormat(t *testing.T) {
 	require.Equal(t, data.RoleName("targets/releases"), delegations[0].Name)
 
 	// Also check that we can add/remove keys by rotating keys
-	oldTargetsKeys := repo.CryptoService.ListKeys(data.CanonicalTargetsRole)
+	oldTargetsKeys := repo.CryptoService().ListKeys(data.CanonicalTargetsRole)
 	require.NoError(t, repo.RotateKey(data.CanonicalTargetsRole, false, nil))
 	require.NoError(t, repo.Publish())
-	newTargetsKeys := repo.CryptoService.ListKeys(data.CanonicalTargetsRole)
+	newTargetsKeys := repo.CryptoService().ListKeys(data.CanonicalTargetsRole)
 
 	require.Len(t, oldTargetsKeys, 1)
 	require.Len(t, newTargetsKeys, 1)
