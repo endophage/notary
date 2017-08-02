@@ -15,6 +15,7 @@ import (
 	"github.com/docker/notary"
 	pb "github.com/docker/notary/proto"
 	"github.com/docker/notary/tuf/data"
+	"github.com/docker/notary/utils"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -67,7 +68,7 @@ func (pk *RemotePrivateKey) Sign(rand io.Reader, msg []byte,
 		Content: msg,
 		KeyID:   &keyID,
 	}
-	sig, err := pk.sClient.Sign(context.Background(), sr)
+	sig, err := pk.sClient.Sign(utils.Timeout30(), sr)
 	if err != nil {
 		return nil, err
 	}
@@ -174,7 +175,7 @@ func NewNotarySigner(conn *grpc.ClientConn) *NotarySigner {
 
 // Create creates a remote key and returns the PublicKey associated with the remote private key
 func (trust *NotarySigner) Create(role data.RoleName, gun data.GUN, algorithm string) (data.PublicKey, error) {
-	publicKey, err := trust.kmClient.CreateKey(context.Background(),
+	publicKey, err := trust.kmClient.CreateKey(utils.Timeout30(),
 		&pb.CreateKeyRequest{Algorithm: algorithm, Role: role.String(), Gun: gun.String()})
 	if err != nil {
 		return nil, err
@@ -190,7 +191,7 @@ func (trust *NotarySigner) AddKey(role data.RoleName, gun data.GUN, k data.Priva
 
 // RemoveKey deletes a key by ID - if the key didn't exist, succeed anyway
 func (trust *NotarySigner) RemoveKey(keyid string) error {
-	_, err := trust.kmClient.DeleteKey(context.Background(), &pb.KeyID{ID: keyid})
+	_, err := trust.kmClient.DeleteKey(utils.Timeout30(), &pb.KeyID{ID: keyid})
 	return err
 }
 
@@ -204,7 +205,7 @@ func (trust *NotarySigner) GetKey(keyid string) data.PublicKey {
 }
 
 func (trust *NotarySigner) getKeyInfo(keyid string) (data.PublicKey, data.RoleName, error) {
-	keyInfo, err := trust.kmClient.GetKeyInfo(context.Background(), &pb.KeyID{ID: keyid})
+	keyInfo, err := trust.kmClient.GetKeyInfo(utils.Timeout30(), &pb.KeyID{ID: keyid})
 	if err != nil {
 		return nil, "", err
 	}
