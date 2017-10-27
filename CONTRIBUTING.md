@@ -4,9 +4,8 @@
 
 ### If your problem is with...
 
- - automated builds
- - your account on the [Docker Hub](https://hub.docker.com/)
- - any other [Docker Hub](https://hub.docker.com/) issue
+ - the Notary official images on Docker Hub
+ - Docker Content Trust
 
 Then please do not report your issue here - you should instead report it to [https://support.docker.com](https://support.docker.com)
 
@@ -18,13 +17,13 @@ Then please do not report your issue here - you should instead report it to [htt
 
 Then please do not open an issue here yet - you should first try one of the following support forums:
 
- - irc: #docker-trust on freenode
+ - slack: #notary on dockercommunity.slack.com
 
 ## Reporting an issue properly
 
 By following these simple rules you will get better and faster feedback on your issue.
 
- - search the bugtracker for an already reported issue
+ - search the GitHub issues in this repo for an already reported issue
 
 ### If you found an issue that describes your problem:
 
@@ -39,23 +38,19 @@ By following these simple rules you will get better and faster feedback on your 
    - bad title: "It doesn't work with my docker"
    - good title: "Publish fail: 400 error with E_INVALID_DIGEST"
  2. copy the output of:
-   - `notary version` or `docker version`
- 3. Run `notary` or `docker` with the `-D` option for debug output, and please include a copy of the command and the output.
+   - `notary version`
+ 3. Run `notary` with the `-D` option for debug output, and please include a copy of the command and the output.
  4. If relevant, copy your `notaryserver` and `notarysigner` logs that show the error (this is likely the output from running `docker-compose up`)
 
-## Contributing a patch for a known bug, or a small correction
+## Contributing code
 
 You should follow the basic GitHub workflow:
 
- 1. fork
- 2. commit a change
- 3. make sure the tests pass
- 4. PR
-
-Additionally, you must [sign your commits](https://github.com/docker/docker/blob/master/CONTRIBUTING.md#sign-your-work). It's very simple:
-
- - configure your name with git: `git config user.name "Real Name" && git config user.email mail@example.com`
- - sign your commits using `-s`: `git commit -s -m "My commit"`
+ 1. Fork this repo
+ 2. Commit changes to your fork
+ 3. Make sure the tests pass
+ 4. PR your branch against the master branch of this repo
+ 5. Ensure all required PR checks are passing
 
 Some simple rules to ensure quick merge:
 
@@ -65,7 +60,7 @@ Some simple rules to ensure quick merge:
  - if fixing a bug or adding a feature, please add or update the relevant `CHANGELOG.md` entry with your pull request number
    and a description of the change
 
-## Contributing new features
+### Additional guidance for contributing new features
 
 You are heavily encouraged to first discuss what you want to do. You can do so on the irc channel, or by opening an issue that clearly describes the use case you want to fulfill, or the problem you are trying to solve.
 
